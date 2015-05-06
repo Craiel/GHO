@@ -1,12 +1,13 @@
 DHO.main = function() {
+	include('Log');
 	include('Assert');
-	include('Debug');
 	include('StaticData');
 	include('Game');
 	include('GameTime');
 	include('UserInterface');
+	include('Network');
 
-	debug.logInfo("Initializing");
+	log.info("Initializing");
 
 	// override our data root if we have it stored somewhere else
 	staticData.setRoot("");
@@ -15,10 +16,10 @@ DHO.main = function() {
 	include('TemplateProvider').SetData(include('TemplateContent'));
 	
 	// Initialize components
-	debug.init();
 	staticData.init();
     game.init();
     userInterface.init();
+	network.init();
 
     // Set the update interval for the non-ui components
     var interval = 1000 / 60;
@@ -41,13 +42,9 @@ DHO.main = function() {
 		DHO.currentUpdateTick++;
 		gameTime.update();
 
-		// Update the debug control if enabled
-		if(DHO.isDebug === true) {
-			debug.update(gameTime);
-		}
-
 		DHO.resetFrame();
 		staticData.update(gameTime);
+		network.update(gameTime);
 	    game.update(gameTime);
 	};
 	

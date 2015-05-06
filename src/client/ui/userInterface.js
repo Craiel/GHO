@@ -1,9 +1,12 @@
 declare('UserInterface', function() {
-    include('Debug');
+    include('Log');
     include('Component');
     include('Game');
     include('Network');
     include('TemplateProvider');
+    include('Integration');
+    include('EventAggregate');
+    include('StaticData');
 
     UserInterface.prototype = component.prototype();
     UserInterface.prototype.$super = parent;
@@ -29,17 +32,19 @@ declare('UserInterface', function() {
     UserInterface.prototype.init = function() {
         this.componentInit();
 
+        eventAggregate.subscribe(staticData.EventNetworkClose, this.onNetworkClosed);
+
         this.loadCss("https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css");
         this.loadCss("https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap-theme.min.css");
         this.loadScript("https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js");
 
         // Mute functions of the old ui
-        this.muteLegacyFunction("loadGraphics");
-        this.muteLegacyFunction("refreshChat");
-        this.muteLegacyFunction("loadTradeTable");
-        this.muteLegacyFunction("loadNpcShop");
-        this.muteLegacyFunction("firstLoad");
-        this.muteLegacyFunction("loadPlayersOnline");
+        integration.muteLegacyFunction("loadGraphics");
+        integration.muteLegacyFunction("refreshChat");
+        integration.muteLegacyFunction("loadTradeTable");
+        integration.muteLegacyFunction("loadNpcShop");
+        integration.muteLegacyFunction("firstLoad");
+        integration.muteLegacyFunction("loadPlayersOnline");
 
 
         var oldBody = $('#body-tag')
@@ -74,24 +79,9 @@ declare('UserInterface', function() {
     // ---------------------------------------------------------------------------
     // interface functions
     // ---------------------------------------------------------------------------
-    UserInterface.prototype.getWindow = function() {
-        try {
-            if (unsafeWindow !== undefined) {
-                return unsafeWindow;
-            }
-        } catch(e) {
-            // Ignore and just fallback to normal window variable
-        }
-
-        return window;
-    };
-
-    UserInterface.prototype.muteLegacyFunction = function(name) {
-        var target = this.getWindow();
-        if(this.getWindow()[name] !== undefined) {
-            target[name + "_MUTE"] = target[name];
-            target[name] = function(args) {};
-        }
+    UserInterface.prototype.onNetworkClosed = function(args) {
+        log.warning("Connection closed, redirecting to login!");
+        window.location = "login.php";
     };
 
     UserInterface.prototype.loadCss = function(path) {

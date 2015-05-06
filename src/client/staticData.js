@@ -12,11 +12,8 @@ declare('StaticData', function () {
 
         this.versionFile = "version.txt";
 
-        this.host = "ws://162.220.163.232:8080/DHOnlineServer/Server";
-
         this.EventNetworkError = "networkError";
         this.EventNetworkMessage = "networkMessage";
-        this.EventNetworkOpen = "networkOpen";
         this.EventNetworkClose = "networkClose";
     }
 

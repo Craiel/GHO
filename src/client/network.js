@@ -1,7 +1,9 @@
 declare('Network', function() {
+    include('Assert');
     include('Component');
     include('EventAggregate');
     include('StaticData');
+    include('Integration');
 
     Network.prototype = component.prototype();
     Network.prototype.$super = parent;
@@ -17,6 +19,8 @@ declare('Network', function() {
         this.lastSendTime = undefined;
         this.lastReceiveTime = undefined;
 
+        this.currentTime = undefined;
+
         this.pendingSendData = [];
     }
 
@@ -27,9 +31,15 @@ declare('Network', function() {
     Network.prototype.init = function() {
         this.componentInit();
 
-        $('#submitBtn').click({self: this}, function (arg) {
-            arg.data.self.onLogin();
-        });
+        this.socket = integration.getSocket();
+        assert.isDefined(this.socket);
+
+        integration.muteLegacyFunction("onError", this.onSocketError);
+        integration.muteLegacyFunction("onMessage", this.onSocketMessage);
+
+        this.socket.onclose = this.onSocketClose;
+        this.socket.onerror = this.onSocketError;
+        this.socket.onmessage = this.onSocketMessage;
     };
 
     Network.prototype.componentUpdate = Network.prototype.update;
@@ -37,6 +47,8 @@ declare('Network', function() {
         if(this.componentUpdate(gameTime) !== true) {
             return false;
         }
+
+        this.currentTime = gameTime.current;
 
         var sendCount = this.pendingSendData.length;
         for(var i = 0; i < sendCount; i++) {
@@ -49,18 +61,6 @@ declare('Network', function() {
     // ---------------------------------------------------------------------------
     // network functions
     // ---------------------------------------------------------------------------
-    Network.prototype.connect = function (address) {
-        try {
-            console.log("Network connecting to " + address);
-            this.socket = new WebSocket(address);
-            this.socket.onerror = this.onSocketError;
-            this.socket.onopen = this.OnSocketOpen;
-        } catch (e) {
-            this.socket = undefined;
-            console.log("Network error: " + e);
-        }
-    };
-
     Network.prototype.onSocketError = function (args) {
         this.isConnected = false;
         this.socket = undefined;
@@ -70,19 +70,8 @@ declare('Network', function() {
         eventAggregate.publish(staticData.EventNetworkError, args);
     };
 
-    Network.prototype.onSocketOpen = function (args) {
-        this.isConnected = true;
-
-        console.log("Network open");
-        console.log(args);
-        eventAggregate.publish(staticData.EventNetworkOpen, args);
-    };
-
     Network.prototype.onSocketMessage = function (args) {
-        this.lastReceiveTime = DHO.gameTime.current;
-
-        console.log("Network MSG: ");
-        console.log(args);
+        this.lastReceiveTime = this.currentTime;
         eventAggregate.publish(staticData.EventNetworkMessage, args);
     };
 
@@ -90,8 +79,6 @@ declare('Network', function() {
         this.isConnected = false;
         this.socket = undefined;
 
-        console.log("Network closed");
-        console.log(args);
         eventAggregate.publish(staticData.EventNetworkClose, args);
     };
 
@@ -102,6 +89,7 @@ declare('Network', function() {
     Network.prototype.sendData = function(currentTime, data) {
         this.socket.send(data);
     };
+
     /*function send(command)
     {
 

@@ -20,11 +20,23 @@ declare('StaticData', function () {
 
         this.ItemTypeAll = "All";
         this.ItemTypeKey = "Key";
+        this.ItemTypeSpecial = "Special";
         this.ItemTypeResource = "Resource";
         this.ItemTypeCrafting = "Crafting";
         this.ItemTypeFarming = "Farming";
+        this.ItemTypeUsable = "Usable";
+        this.ItemTypeBrewing = "Brewing";
 
-        this.ItemTypes = [this.ItemTypeAll, this.ItemTypeKey, this.ItemTypeResource, this.ItemTypeCrafting, this.ItemTypeFarming];
+        this.ItemTypes = [this.ItemTypeAll, this.ItemTypeKey, this.ItemTypeSpecial, this.ItemTypeResource, this.ItemTypeFarming, this.ItemTypeCrafting, this.ItemTypeBrewing, this.ItemTypeUsable];
+
+        this.ItemStarDust = 'starDust';
+        this.ItemStarDustBox1 = 'starDustBox1';
+        this.ItemStarDustBox2 = 'starDustBox2';
+        this.ItemStarDustBox3 = 'starDustBox3';
+        this.ItemStarDustBox4 = 'starDustBox4';
+        this.ItemTreasureMap = 'treasureMap';
+        this.ItemTreasureChest = 'treasureChest';
+        this.ItemTreasureKey = 'treasureKey';
 
         this.ItemOil = 'oil';
         this.ItemWood = 'wood';
@@ -38,6 +50,8 @@ declare('StaticData', function () {
         this.ItemGold = 'gold';
         this.ItemQuartz = 'quartz';
         this.ItemFlint = 'flint';
+        this.ItemMarble = 'marble';
+        this.ItemTitanium = 'titanium';
 
         this.ItemSapphire = 'sapphire';
         this.ItemEmerald = 'emerald';
@@ -52,23 +66,60 @@ declare('StaticData', function () {
         this.ItemGoldBar = 'goldBar';
 
         this.ItemVial = 'vial';
+
         this.ItemDottedGreenLeaf = 'dottedGreenLeaf';
         this.ItemGreenLeaf = 'greenLeaf';
         this.ItemLimeLeaf = 'limeLeaf';
         this.ItemGoldLeaf = 'goldLeaf';
         this.ItemCrystalLeaf = 'crystalLeaf';
+        this.ItemStarDustSeed = 'starDustSeed';
         this.ItemRedMushroom = 'redMushroom';
+        this.ItemBlueMushroom = 'blueMushroom';
 
         this.ItemStarDustPotion = 'starDustPotion';
         this.ItemSeedPotion = 'seedPotion';
         this.ItemSmeltingPotion = 'smeltingPotion';
+        this.ItemOilPotion = 'oilPotion';
 
-        this.Items = [this.ItemOil, this.ItemWood, this.ItemPlanks, this.ItemSand, this.ItemStone, this.ItemCopper,
+        this.ItemSawMill = 'sawMill';
+        this.ItemFurnaceStone = 'furnaceStone';
+        this.ItemFurnaceBronze = 'furnaceBronze';
+        this.ItemFurnaceIron = 'furnaceIron';
+        this.ItemFurnaceSilver = 'furnaceSilver';
+        this.ItemFurnaceGold = 'furnaceGold';
+        this.ItemFurnaceAncient = 'furnaceAncient';
+        this.ItemMiningDrill = 'miningDrill';
+        this.ItemCrusher = 'crusher';
+        this.ItemGiantDrill = 'giantDrill';
+        this.ItemRoadHeader = 'roadHeader';
+        this.ItemOilPipe = 'oilPipe';
+        this.ItemPumpjack = 'pumpJack';
+        this.ItemSandCollector = 'sandCollector';
+        this.ItemEnchantedPickaxe = 'enchantedPickaxe';
+        this.ItemEnchantedHammer = 'enchantedHammer';
+        this.ItemEnchantedRake = 'enchantedRake';
+
+        this.ItemMiners = 'miners';
+        this.ItemLumberjacks = 'lumberjacks';
+        this.ItemFarmers = 'farmers';
+        this.ItemPirates = 'pirates';
+        this.ItemGemFinder = 'gemFinder';
+
+        this.Items = [this.ItemStarDust, this.ItemStarDustBox1, this.ItemStarDustBox2, this.ItemStarDustBox3, this.ItemStarDustBox4,
+            this.ItemTreasureMap, this.ItemTreasureChest, this.ItemTreasureKey,
+            this.ItemOil, this.ItemWood, this.ItemPlanks, this.ItemSand, this.ItemStone, this.ItemCopper,
             this.ItemTin, this.ItemIron, this.ItemSilver, this.ItemGold, this.ItemQuartz, this.ItemFlint,
+            this.ItemMarble, this.ItemTitanium,
             this.ItemSapphire, this.ItemEmerald, this.ItemRuby, this.ItemDiamond, this.ItemBloodDiamond,
             this.ItemGlass, this.ItemBronzeBar, this.ItemIronBar, this.ItemSilverBar, this.ItemGoldBar,
             this.ItemVial, this.ItemDottedGreenLeaf, this.ItemGreenLeaf, this.ItemLimeLeaf, this.ItemGoldLeaf,
-            this.ItemCrystalLeaf, this.ItemRedMushroom, this.ItemStarDustPotion, this.ItemSeedPotion, this.ItemSmeltingPotion];
+            this.ItemCrystalLeaf, this.ItemStarDustSeed, this.ItemRedMushroom, this.ItemBlueMushroom,
+            this.ItemStarDustPotion, this.ItemSeedPotion, this.ItemSmeltingPotion, this.ItemOilPotion,
+            this.ItemSawMill, this.ItemFurnaceStone, this.ItemFurnaceBronze, this.ItemFurnaceIron, this.ItemFurnaceSilver,
+            this.ItemFurnaceGold, this.ItemFurnaceAncient, this.ItemMiningDrill, this.ItemCrusher, this.ItemGiantDrill,
+            this.ItemRoadHeader, this.ItemOilPipe, this.ItemPumpjack, this.ItemSandCollector,
+            this.ItemEnchantedPickaxe, this.ItemEnchantedHammer, this.ItemEnchantedRake,
+            this.ItemMiners, this.ItemLumberjacks, this.ItemFarmers, this.ItemPirates, this.ItemGemFinder];
 
         this.CategoryMining = "Mining";
         this.CategoryCrafting = "Crafting";

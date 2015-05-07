@@ -7,6 +7,7 @@ declare('UserInterface', function() {
     include('Integration');
     include('EventAggregate');
     include('StaticData');
+    include('CoreUtils');
 
     UserInterface.prototype = component.prototype();
     UserInterface.prototype.$super = parent;
@@ -22,7 +23,13 @@ declare('UserInterface', function() {
             placement: {from: "bottom", align: "right"},
             delay: 1000//,
             //timer: 1000
-        }
+        };
+
+        this.categoryNav = {};
+        this.categoryContent = {};
+        this.activeCategory = staticData.CategoryMining;
+
+        this.activeItemFilter = staticData.ItemTypeAll;
     }
 
     // ---------------------------------------------------------------------------
@@ -46,7 +53,6 @@ declare('UserInterface', function() {
         integration.muteLegacyFunction("firstLoad");
         integration.muteLegacyFunction("loadPlayersOnline");
 
-
         var oldBody = $('#body-tag')
         var newBody = $('<body></body>');
         newBody.append($(templateProvider.GetTemplate("main")), {id: 'main'});
@@ -54,6 +60,9 @@ declare('UserInterface', function() {
 
         oldBody.remove();
         $("html").append(newBody);
+
+        this.initCategories();
+        this.initItemFilters();
 
         this.notifyInfo("DHO Initialized!");
     };
@@ -64,21 +73,70 @@ declare('UserInterface', function() {
             return false;
         }
 
-        if(network.isConnected === true) {
-            $('#navBarLogin').hide();
-            $('#loginPage').hide();
-            $('#contentPage').show();
-        } else {
-            $('#navBarLogin').show();
-            $('#loginPage').show();
-            $('#contentPage').hide();
-        }
+        $('#navName').text(game.getUserName());
+        $('#navPlayersOnline').text(game.getOnlinePlayerCount() + 'Players Online');
+
+        this.updateChat(gameTime);
+
         return true;
     };
 
     // ---------------------------------------------------------------------------
     // interface functions
     // ---------------------------------------------------------------------------
+    UserInterface.prototype.initCategories = function() {
+        for(var i = 0; i < staticData.Categories.length; i++) {
+            var category = staticData.Categories[i];
+
+            // Setup the category controls
+            this.categoryContent[category] = $('#content' + category);
+            if(this.categoryContent[category].length <= 0) {
+                log.error('Category Content missing: ' + category);
+                continue;
+            }
+
+            this.categoryContent[category].hide();
+
+            this.categoryNav[category] = $('#nav' + category);
+            if(this.categoryNav[category].length <= 0) {
+                log.error('Category nav missing: ' + category);
+                continue;
+            }
+
+            this.categoryNav[category].removeClass('active');
+
+            var navRef = $('#nav' + category + 'Ref');
+            if(navRef.length <= 0) {
+                log.error('Nav ref missing: ' + category);
+                continue;
+            }
+
+            navRef.click({self: this, category: category}, function(args) { args.data.self.activateCategory(args.data.category); })
+        }
+
+        // Activate the default category
+        this.activateCategory(this.activeCategory);
+    };
+
+    UserInterface.prototype.activateCategory = function(newCategory) {
+        log.info('Activating ' + this.activeCategory + " -> " + newCategory);
+        this.categoryContent[this.activeCategory].hide();
+        this.categoryNav[this.activeCategory].removeClass('active');
+
+        this.activeCategory = newCategory;
+
+        this.categoryContent[this.activeCategory].show();
+        this.categoryNav[this.activeCategory].addClass('active');
+    };
+
+    UserInterface.prototype.initItemFilters = function() {
+        // Todo
+    };
+
+    UserInterface.prototype.activateItemFilter = function(newFilter) {
+        // Todo
+    };
+
     UserInterface.prototype.onNetworkClosed = function(args) {
         log.warning("Connection closed, redirecting to login!");
         window.location = "login.php";
@@ -111,6 +169,35 @@ declare('UserInterface', function() {
     UserInterface.prototype.notifyError = function (message) {
         var args = $.extend({type: 'danger'}, this.defaultNotifyOptions);
         $.notify({message: message}, args);
+    };
+
+    UserInterface.prototype.updateChat = function(gameTime) {
+        var entries = game.getNewChatEntries();
+        var target = $('#chatWindow');
+        var scrollToEnd = false;
+        for(var i = 0; i < entries.length; i++) {
+            var entry = entries[i];
+            var metaData = {
+                time: coreUtils.getTimeDisplay(entry.time),
+                user: entry.user,
+                level: entry.level,
+                message: entry.message
+            };
+
+            if(entry.isEvent === true) {
+                var content = $(templateProvider.GetTemplate("chatEventTemplate", metaData));
+            } else {
+                var content = $(templateProvider.GetTemplate("chatLineTemplate", metaData));
+            }
+
+            target.append(content);
+            scrollToEnd = true;
+        }
+
+        // Todo: Add setting to disable this
+        if(scrollToEnd === true) {
+            target.animate({ scrollTop: target.prop("scrollHeight")}, 200);
+        }
     };
 
     return new UserInterface();

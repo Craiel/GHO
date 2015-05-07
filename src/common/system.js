@@ -20,6 +20,12 @@ String.prototype.format = function() {
 	return formatted;
 };
 
+// http://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript-jquery
+// Won't work on older browsers because of Array.reduce();
+String.prototype.getHashCode = function() {
+    return this.split("").reduce(function(a,b){a=((a<<5)-a)+b.charCodeAt(0);return a&a},0);
+};
+
 Number.prototype.clamp = function(min, max) {
     return Math.min(Math.max(this, min), max);
 };

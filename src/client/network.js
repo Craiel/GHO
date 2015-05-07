@@ -14,8 +14,6 @@ declare('Network', function() {
 
         this.socket = undefined;
 
-        this.isConnected = false;
-
         this.lastSendTime = undefined;
         this.lastReceiveTime = undefined;
 

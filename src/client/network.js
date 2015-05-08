@@ -112,11 +112,20 @@ declare('Network', function() {
     }*/
 
     Network.prototype.sendHandshake = function (name) {
-        //console.assert(this.isConnected);
-
-        this.queueSend("HANDSHAKE=" + name);
-        //this.socket.
+        this.queueSend("HANDSHAKE={0}".format(name));
     };
+
+    Network.prototype.sendSellItem = function(item, count) {
+        this.queueSend("SELL={0};{1}".format(item, count));
+    };
+
+    Network.prototype.sendBuyItem = function(item) {
+        this.queueSend("BUY={0}".format(item));
+    };
+
+    Network.prototype.sendConvertOreToXp = function(item, count) {
+        this.queueSend("USE_PICKAXE={0};{1}".format(item, count));
+    }
 
     return new Network();
 

@@ -22,7 +22,7 @@ function DHUtils() {
     this.statusBarStyle = "color: yellow; margin-left: 6px; margin-right: 2px; margin-top: 2px; float: left";
 
     // Have to use this one to access the global variables
-    this.window = unsafeWindow;
+    this.window = window;
 
     this.ItemOil = 'oil';
     this.ItemWood = 'wood';
@@ -57,16 +57,29 @@ function DHUtils() {
     this.ItemCrystalLeaf = 'crystalLeaf';
     this.ItemRedMushroom = 'redMushroom';
 
+    this.ItemStarDustSeed = 'starDustSeeds';
+    this.ItemRedMushroomSeed = 'redMushroomSeeds';
+    this.ItemBlueMushroomSeed = 'blewitMushroomSeeds';
+    this.ItemGoldLeafSeed = 'goldLeafSeeds';
+
+    this.ItemDottedGreenLeafSeed = 'dottedGreenLeafSeeds';
     this.ItemStarDustPotion = 'starDustPotion';
     this.ItemSeedPotion = 'seedPotion';
     this.ItemSmeltingPotion = 'smeltingPotion';
+    this.ItemLimeLeafSeed = 'limeLeafSeeds';
+    this.ItemGreenLeafSeed = 'greenLeafSeeds';
 
     this.Items = [this.ItemOil, this.ItemWood, this.ItemPlanks, this.ItemSand, this.ItemStone, this.ItemCopper,
         this.ItemTin, this.ItemIron, this.ItemSilver, this.ItemGold, this.ItemQuartz, this.ItemFlint,
         this.ItemSapphire, this.ItemEmerald, this.ItemRuby, this.ItemDiamond, this.ItemBloodDiamond,
         this.ItemGlass, this.ItemBronzeBar, this.ItemIronBar, this.ItemSilverBar, this.ItemGoldBar,
         this.ItemVial, this.ItemDottedGreenLeaf, this.ItemGreenLeaf, this.ItemLimeLeaf, this.ItemGoldLeaf,
-        this.ItemCrystalLeaf, this.ItemRedMushroom, this.ItemStarDustPotion, this.ItemSeedPotion, this.ItemSmeltingPotion];
+        this.ItemCrystalLeaf, this.ItemRedMushroom, this.ItemStarDustPotion, this.ItemSeedPotion, this.ItemSmeltingPotion,
+        this.ItemDottedGreenLeafSeed, this.ItemStarDustSeed, this.ItemRedMushroomSeed, this.ItemBlueMushroomSeed,
+        this.ItemGreenLeafSeed, this.ItemLimeLeafSeed, this.ItemGoldLeafSeed];
+
+    this.Seeds = [this.ItemDottedGreenLeafSeed, this.ItemStarDustSeed, this.ItemRedMushroomSeed, this.ItemBlueMushroomSeed,
+        this.ItemGreenLeafSeed, this.ItemLimeLeafSeed, this.ItemGoldLeafSeed];
 
     this.itemCount = {};
 
@@ -235,7 +248,18 @@ DHUtils.prototype.updateItemCount = function(currentTime) {
 DHUtils.prototype.updatePlantStatus = function(currentTime) {
     var state = this.getPlantState();
 
-    this.displayPlantStatus.text("Plants" + this.getAutoStateText(this.autoHarvest) + ": " + state.growing + "G, " + state.ready + "R, " + state.dead + "D, " + state.empty + "E");
+    this.displayPlantStatus.text("Plants" + this.getAutoStateText(this.autoHarvest) + ": " + state.growing + "G, " + state.ready + "R, " + state.dead + "D, " + state.empty.length + "E");
+};
+
+DHUtils.prototype.pickSeedToPlant = function() {
+    for(var i = 0; i < this.Seeds.length; i++) {
+        var key = this.Seeds[i];
+        if(this.getItemCount(key) > 0) {
+            return key;
+        }
+    }
+
+    return undefined;
 };
 
 DHUtils.prototype.updateGemDisplay = function(currentTime) {
@@ -320,6 +344,8 @@ DHUtils.prototype.updateAutoActions = function(currentTime) {
         if(plantState.ready > 0) {
             this.harvestPlants();
         }
+
+        this.updateAutoPlant();
     }
 
     if(this.getItemCount(this.ItemOil) > this.getAutoOilThreshold()) {
@@ -356,7 +382,7 @@ DHUtils.prototype.getItemCount = function(key) {
 };
 
 DHUtils.prototype.getPlantState = function() {
-    var plantState = {empty: 0, ready: 0, dead: 0, growing: 0};
+    var plantState = {empty: [], ready: 0, dead: 0, growing: 0};
     for(var i = 1; i <= this.farmingPatchCount; i++) {
         var state = this.window['farmingPatchTimer' + i];
         if(state === '1') {
@@ -366,11 +392,29 @@ DHUtils.prototype.getPlantState = function() {
         } else if(state > 1) {
             plantState.growing++;
         } else {
-            plantState.empty++;
+            plantState.empty.push(i);
         }
     }
 
     return plantState;
+};
+
+DHUtils.prototype.updateAutoPlant = function() {
+    var state = this.getPlantState();
+
+    if(state.empty.length > 0 && this.autoHarvest) {
+        for(var i = 0; i < state.empty.length; i++) {
+            var slot = state.empty[i];
+            var seed = this.pickSeedToPlant();
+            if(slot > 4 || seed === undefined) {
+                continue;
+            }
+
+            // applyPlantSeed(slot, )
+            console.log('Planting ' + seed + ' in ' + slot)
+            applyPlantSeed(seed, slot);
+        }
+    }
 };
 
 DHUtils.prototype.harvestPlants = function(shiftState) {

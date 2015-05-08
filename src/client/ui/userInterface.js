@@ -8,6 +8,7 @@ declare('UserInterface', function() {
     include('EventAggregate');
     include('StaticData');
     include('CoreUtils');
+    include('GameData');
 
     UserInterface.prototype = component.prototype();
     UserInterface.prototype.$super = parent;
@@ -28,6 +29,10 @@ declare('UserInterface', function() {
         this.categoryNav = {};
         this.categoryContent = {};
         this.activeCategory = staticData.CategoryMining;
+
+        this.itemControlParent = undefined;
+        this.itemControls = {};
+        this.itemCountControls = {};
 
         this.activeItemFilter = staticData.ItemTypeAll;
     }
@@ -61,8 +66,11 @@ declare('UserInterface', function() {
         oldBody.remove();
         $("html").append(newBody);
 
+        this.itemControlParent = $('#contentItems');
+
         this.initCategories();
         this.initItemFilters();
+        this.initItems();
 
         this.notifyInfo("DHO Initialized!");
     };
@@ -77,6 +85,7 @@ declare('UserInterface', function() {
         $('#navPlayersOnline').text(game.getOnlinePlayerCount() + 'Players Online');
 
         this.updateChat(gameTime);
+        this.updateItems(gameTime);
 
         return true;
     };
@@ -135,6 +144,42 @@ declare('UserInterface', function() {
 
     UserInterface.prototype.activateItemFilter = function(newFilter) {
         // Todo
+    };
+
+    UserInterface.prototype.initItems = function() {
+        for(var key in gameData.Items) {
+            var itemData = gameData.Items[key];
+            var metaData = {
+                id: key,
+                icon: itemData.icon,
+                name: itemData.name
+            };
+
+            var control = $(templateProvider.GetTemplate('itemTemplate', metaData));
+            var tooltip = '<span style="text-align: center; font-weight: bold">{0}</span>'.format(itemData.name)
+            if(itemData.desc !== undefined) {
+                tooltip += '<div>{0}</div>'.format(itemData.desc);
+            }
+            control.attr('title', tooltip);
+            control.tooltip({html: true});
+
+            this.itemControlParent.append(control);
+            this.itemControls[key] = control;
+            this.itemCountControls[key] = $('#itemCount_' + key);
+        }
+    };
+
+    UserInterface.prototype.updateItems = function(gameTime) {
+        for(var key in this.itemCountControls) {
+            var owned = game.getItemCount(key);
+            if(owned <= 0) {
+                this.itemControls[key].hide();
+            } else {
+                this.itemControls[key].show();
+                this.itemControls[key].tooltip({html: true});
+                this.itemCountControls[key].text(owned);
+            }
+        }
     };
 
     UserInterface.prototype.onNetworkClosed = function(args) {

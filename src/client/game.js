@@ -33,6 +33,10 @@ declare('Game', function() {
         this.currentTime = -1;
 
         this.onlinePlayers = -1;
+
+        this.enchantedPickaxeLevel = 0;
+        this.enchantedHammerLevel = 0;
+        this.enchantedRakeLevel = 0;
     }
 
     // ---------------------------------------------------------------------------
@@ -46,6 +50,8 @@ declare('Game', function() {
         this.commandMap["TRADE_REFRESH="] = this.onReceiveTradeInfo;
         this.commandMap["REFRESH_CHAT="] = this.onReceiveChat;
         this.commandMap["ITEMS_DATA="] = this.onReceiveItemData;
+        this.commandMap["REFRESH_DONOR_COINS="] = this.onReceiveDonorCoins;
+        this.commandMap["IS_HUMAN_TEST="] = this.onReceiveHumanTest;
 
         this[saveKeys.idnUserName] = integration.getUserName();
 
@@ -138,6 +144,14 @@ declare('Game', function() {
 
             self.updateItemData(key, value);
         };
+    };
+
+    Game.prototype.onReceiveDonorCoins = function(self, args) {
+        log.info("RCV_DonorCoins: " + args.length);
+    };
+
+    Game.prototype.onReceiveHumanTest = function(self, args) {
+        log.info("RCV_HumanTest: " + args.length);
     };
 
     Game.prototype.resetPlayerData = function() {
@@ -243,6 +257,14 @@ declare('Game', function() {
         var data = this.chatData.slice();
         this.chatData = [];
         return data;
+    };
+
+    Game.prototype.getItemCount = function(key) {
+        if(this.itemData[key] === undefined) {
+            return -1;
+        }
+
+        return this.itemData[key];
     };
 
     // ---------------------------------------------------------------------------

@@ -1,5 +1,9 @@
+String.prototype.getHashCode = function() {
+    return this.split("").reduce(function(a,b){a=((a<<5)-a)+b.charCodeAt(0);return a&a},0);
+};
+
 function DHUtils() {
-    this.version = 0.1;
+    this.version = 0.2;
     this.isEnabled = false;
 
     this.mainDiv = undefined;
@@ -8,6 +12,8 @@ function DHUtils() {
     this.displayMarketCoins = undefined;
     this.displayDrillStatus = undefined;
     this.displayCrusherStatus = undefined;
+    this.displayGiantDrillStatus = undefined;
+    this.displayRoadHeaderStatus = undefined;
     this.displaySandCollectorStatus = undefined;
     this.displaySmeltStatus = undefined;
     this.itemPerMinuteElements = {};
@@ -85,6 +91,8 @@ function DHUtils() {
 
     this.ActivateableDrill = 'drill';
     this.ActivateableCrusher = 'crusher';
+    this.ActivateableGiantDrill = 'giantDrill';
+    this.ActivateableRoadHeader = 'roadHeader';
     this.ActivateableSandCollector = 'sandCollector';
 
     this.autoActionTime = undefined;
@@ -94,6 +102,8 @@ function DHUtils() {
     this.autoCollectMarket = false;
     this.autoEnableDrill = false;
     this.autoEnableCrusher = false;
+    this.autoEnableGiantDrill = false;
+    this.autoEnableRoadHeader = false;
     this.autoEnableSandCollector = false;
     this.autoEnableSmelting = false;
 
@@ -110,6 +120,12 @@ function DHUtils() {
 
     this.itemPerMinuteLastCount = {};
     this.itemPerMinute = {};
+
+    this.chatHistoryLimit = 100;
+    this.chatDataLookup = {};
+
+    this.modList = ['zack', 'luxferre'];
+    this.devList = ['smitty'];
 }
 
 DHUtils.prototype.error = function(message) {
@@ -122,6 +138,11 @@ DHUtils.prototype.info = function(message) {
 
 DHUtils.prototype.init = function() {
     this.info("Initializing...");
+
+    // Override some basic functions
+    this.baseRefreshChat = this.window.refreshChat;
+    this.window.refreshChat = this.refreshChat;
+    this.resetChat();
 
     var root = $('#body-tag');
     if(root.length <= 0) {
@@ -165,14 +186,18 @@ DHUtils.prototype.initElements = function(root) {
 
     root.append(this.mainDiv);
 
-
+	this.displayGemStatus = $('<div style="' + this.statusBarStyle + '"></div>');
+    this.mainDiv.append(this.displayGemStatus);
+    
     this.displayPlantStatus = $('<div style="' + this.statusBarStyle + '"></div>');
     this.displayPlantStatus.css( 'cursor', 'pointer' );
     this.displayPlantStatus.click({self: this}, function(arg) { arg.data.self.harvestPlants(arg.shiftKey); });
     this.mainDiv.append(this.displayPlantStatus);
-
-    this.displayGemStatus = $('<div style="' + this.statusBarStyle + '"></div>');
-    this.mainDiv.append(this.displayGemStatus);
+    
+    this.displaySmeltStatus = $('<div style="' + this.statusBarStyle + '"></div>');
+    this.displaySmeltStatus.css( 'cursor', 'pointer' );
+    this.displaySmeltStatus.click({self: this}, function(arg) { arg.data.self.toggleSmelting(arg.shiftKey, arg.ctrlKey); });
+    this.mainDiv.append(this.displaySmeltStatus);
 
     this.displayMarketCoins = $('<div style="' + this.statusBarStyle + '"></div>');
     this.displayMarketCoins.css( 'cursor', 'pointer');
@@ -188,16 +213,21 @@ DHUtils.prototype.initElements = function(root) {
     this.displayCrusherStatus.css( 'cursor', 'pointer' );
     this.displayCrusherStatus.click({self: this}, function(arg) { arg.data.self.toggleCrusher(arg.shiftKey); });
     this.mainDiv.append(this.displayCrusherStatus);
+    
+    this.displayGiantDrillStatus = $('<div style="' + this.statusBarStyle + '"></div>');
+    this.displayGiantDrillStatus.css( 'cursor', 'pointer' );
+    this.displayGiantDrillStatus.click({self: this}, function(arg) { arg.data.self.toggleGiantDrill(arg.shiftKey); });
+    this.mainDiv.append(this.displayGiantDrillStatus);
+    
+    this.displayRoadHeaderStatus = $('<div style="' + this.statusBarStyle + '"></div>');
+    this.displayRoadHeaderStatus.css( 'cursor', 'pointer' );
+    this.displayRoadHeaderStatus.click({self: this}, function(arg) { arg.data.self.toggleRoadHeader(arg.shiftKey); });
+    this.mainDiv.append(this.displayRoadHeaderStatus);
 
     this.displaySandCollectorStatus = $('<div style="' + this.statusBarStyle + '"></div>');
     this.displaySandCollectorStatus.css( 'cursor', 'pointer' );
     this.displaySandCollectorStatus.click({self: this}, function(arg) { arg.data.self.toggleSandCollector(arg.shiftKey); });
     this.mainDiv.append(this.displaySandCollectorStatus);
-
-    this.displaySmeltStatus = $('<div style="' + this.statusBarStyle + '"></div>');
-    this.displaySmeltStatus.css( 'cursor', 'pointer' );
-    this.displaySmeltStatus.click({self: this}, function(arg) { arg.data.self.toggleSmelting(arg.shiftKey, arg.ctrlKey); });
-    this.mainDiv.append(this.displaySmeltStatus);
 
     for(var i = 0; i < this.Items.length; i++) {
         var material = this.Items[i];
@@ -275,10 +305,16 @@ DHUtils.prototype.updateGemDisplay = function(currentTime) {
 
 DHUtils.prototype.updateActivateableDisplay = function(currentTime) {
     var status = this.getActivateableStatus(this.ActivateableDrill) === true ? "On" : "Off";
-    this.displayDrillStatus.text("Drills" + this.getAutoStateText(this.autoEnableDrill) + ": " + status);
+    this.displayDrillStatus.text("Drill" + this.getAutoStateText(this.autoEnableDrill) + ": " + status);
 
     status = this.getActivateableStatus(this.ActivateableCrusher) === true ? "On" : "Off";
-    this.displayCrusherStatus.text("Crushers" + this.getAutoStateText(this.autoEnableCrusher) + ": " + status);
+    this.displayCrusherStatus.text("Crusher" + this.getAutoStateText(this.autoEnableCrusher) + ": " + status);
+    
+    status = this.getActivateableStatus(this.ActivateableGiantDrill) === true ? "On" : "Off";
+    this.displayGiantDrillStatus.text("GiantDrill" + this.getAutoStateText(this.autoEnableGiantDrill) + ": " + status);
+    
+    status = this.getActivateableStatus(this.ActivateableRoadHeader) === true ? "On" : "Off";
+    this.displayRoadHeaderStatus.text("RoadHeader" + this.getAutoStateText(this.autoEnableRoadHeader) + ": " + status);
 
     status = this.getActivateableStatus(this.ActivateableSandCollector) === true ? "On" : "Off";
     this.displaySandCollectorStatus.text("SandCollectors" + this.getAutoStateText(this.autoEnableSandCollector) + ": " + status);
@@ -355,6 +391,14 @@ DHUtils.prototype.updateAutoActions = function(currentTime) {
 
         if(this.autoEnableCrusher === true && this.getActivateableStatus(this.ActivateableCrusher) !== true) {
             this.toggleCrusher();
+        }
+        
+        if(this.autoEnableGiantDrill === true && this.getActivateableStatus(this.ActivateableGiantDrill) !== true) {
+            this.toggleGiantDrill();
+        }
+        
+        if(this.autoEnableRoadHeader === true && this.getActivateableStatus(this.ActivateableRoadHeader) !== true) {
+            this.toggleRoadHeader();
         }
 
         if(this.autoEnableCrusher === true && this.getActivateableStatus(this.ActivateableSandCollector) !== true) {
@@ -467,6 +511,44 @@ DHUtils.prototype.toggleCrusher = function(shiftState) {
     } else {
         this.info("Turning on Crushers");
         this.toggleActivated(this.ActivateableCrusher, true);
+    }
+};
+
+DHUtils.prototype.toggleGiantDrill = function(shiftState) {
+    if(bindedGiantDrill <= 0) {
+        return;
+    }
+
+    if(shiftState) {
+        this.autoEnableGiantDrill = !this.autoEnableGiantDrill;
+        return;
+    }
+
+    if(this.getActivateableStatus(this.ActivateableGiantDrill)) {
+        this.info("Turning off Giant Drills");
+        this.toggleActivated(this.ActivateableGiantDrill);
+    } else {
+        this.info("Turning on Giant Drills");
+        this.toggleActivated(this.ActivateableGiantDrill, true);
+    }
+};
+
+DHUtils.prototype.toggleRoadHeader = function(shiftState) {
+    if(bindedRoadHeader <= 0) {
+        return;
+    }
+
+    if(shiftState) {
+        this.autoEnableRoadHeader = !this.autoEnableRoadHeader;
+        return;
+    }
+
+    if(this.getActivateableStatus(this.ActivateableRoadHeader)) {
+        this.info("Turning off Road Header");
+        this.toggleActivated(this.ActivateableRoadHeader);
+    } else {
+        this.info("Turning on Road Header");
+        this.toggleActivated(this.ActivateableRoadHeader, true);
     }
 };
 
@@ -587,6 +669,121 @@ DHUtils.prototype.startSmelting = function() {
     }
 
     send("SMELT=" + target + ";" + capacity);
+};
+
+DHUtils.prototype.resetChat = function() {
+    this.chatDataLookup = {};
+    $("#chat-area-div").empty();
+};
+
+DHUtils.prototype.refreshChat = function(data) {
+    var self = dhUtils;
+    var arrayChat = data.split("~");
+    var chatbox = $("#chat-area-div");
+
+    //var chatLines = chatbox.children().length;
+    while(chatbox.children().length > self.chatHistoryLimit) {
+        chatbox.children().first().remove();
+    }
+
+    if(Object.keys(self.chatDataLookup).length > self.chatHistoryLimit * 10) {
+        // reset the whole chat if we been running too long
+        self.resetChat();
+    }
+
+    for(var i = 0; i < arrayChat.length; i++) {
+        var line = arrayChat[i];
+        var key = line.getHashCode();
+        if(self.chatDataLookup[key] !== undefined) {
+            return;
+        }
+        self.chatDataLookup[key] = 1;
+
+        var chatData = {
+            color: undefined,
+            tagString: undefined,
+            tagClass: undefined,
+            tagImage: undefined,
+            message: line
+        };
+
+        self.analyzeChatData(chatData);
+        self.appendChatData(chatData, chatbox);
+    };
+
+    // Chat only scrolls down if it's already at the bottom
+    if(chatbox.scrollTop() + chatbox.innerHeight()>= chatbox.scrollHeight){
+        chatbox.animate({scrollTop: 5555}, 'slow');
+    }
+};
+
+DHUtils.prototype.analyzeChatData = function(data) {
+    if(data.message.startsWith("!!!")) {
+        data.message = data.message.slice(3);
+        if (data.message === 'yell') {
+            data.message = data.message.slice(4);
+            data.tagString = 'Server Message';
+            data.color = 'blue';
+            data.tagClass = 'chat-tag-yell';
+        } else {
+            for (var i = 0; i < this.devList.length; i++) {
+                if (data.message.startsWith(devList[i])) {
+                    data.color = '#666600';
+                    data.tagString = 'Dev';
+                    data.tagClass = 'chat-tag-dev';
+                    break;
+                }
+            }
+        }
+    } else if(data.message.startsWith('|') || data.message.startsWith('*')) {
+        if(data.message.startsWith('|')) {
+            data.color = 'green';
+            data.tagClass = 'chat-tag-contributor';
+            data.tagString = 'Contributor';
+        } else {
+            data.tagImage = "<img src='images/icons/donor-icon.gif' style='vertical-align: text-top;' width='20' height='20' alt='Donor'/>";
+        }
+
+        for(var i = 0; i < this.modList; i++) {
+            if(data.message.startsWith(this.modList[i])) {
+                data.color = '#669999';
+                data.tagClass = 'chat-tag-mod';
+                data.tagString = 'Mod';
+            }
+        }
+
+        data.message = data.message.slice(1);
+    }
+
+    if (data.message.startsWith(username)) {
+        data.color = 'FF0000';
+    }
+};
+
+DHUtils.prototype.appendChatData = function(data, target) {
+    var lineContent = $('<div></div>');
+    lineContent.append('<span>[' + this.getCurrentTimeFormat() + '] </span>');
+    var parent = lineContent;
+    if(data.color !== undefined) {
+        var colorControl = $("<span style='color:" + data.color + ";'></span>");
+        parent.append(colorControl);
+        parent = colorControl;
+    }
+    if(data.tagImage !== undefined) {
+        parent.append($(data.tagImage));
+    }
+    if(data.tagClass !== undefined) {
+        var classControl = $("<span class='" + data.tagClass + "'>" + data.tagString + "</span>");
+        parent.append(classControl);
+    }
+
+    parent.append($('<span>' + data.message + '</span>'));
+    target.append(lineContent);
+};
+
+DHUtils.prototype.getCurrentTimeFormat = function() {
+    var date = new Date();
+    return date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds();
 };
 
 dhUtils = new DHUtils();

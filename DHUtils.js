@@ -42,6 +42,9 @@ function DHUtils() {
     this.ItemGold = 'gold';
     this.ItemQuartz = 'quartz';
     this.ItemFlint = 'flint';
+    this.ItemMarble = 'marble';
+    this.ItemTitanium = 'titanium';
+    this.ItemSandstone = 'sandstone';
 
     this.ItemSapphire = 'sapphire';
     this.ItemEmerald = 'emerald';
@@ -82,10 +85,12 @@ function DHUtils() {
         this.ItemVial, this.ItemDottedGreenLeaf, this.ItemGreenLeaf, this.ItemLimeLeaf, this.ItemGoldLeaf,
         this.ItemCrystalLeaf, this.ItemRedMushroom, this.ItemStarDustPotion, this.ItemSeedPotion, this.ItemSmeltingPotion,
         this.ItemDottedGreenLeafSeed, this.ItemStarDustSeed, this.ItemRedMushroomSeed, this.ItemBlueMushroomSeed,
-        this.ItemGreenLeafSeed, this.ItemLimeLeafSeed, this.ItemGoldLeafSeed];
+        this.ItemGreenLeafSeed, this.ItemLimeLeafSeed, this.ItemGoldLeafSeed,
+        this.ItemMarble, this.ItemTitanium, this.ItemSandstone];
 
+    // this.ItemGoldLeafSeed
     this.Seeds = [this.ItemDottedGreenLeafSeed, this.ItemStarDustSeed, this.ItemRedMushroomSeed, this.ItemBlueMushroomSeed,
-        this.ItemGreenLeafSeed, this.ItemLimeLeafSeed, this.ItemGoldLeafSeed];
+        this.ItemGreenLeafSeed, this.ItemLimeLeafSeed];
 
     this.itemCount = {};
 
@@ -106,6 +111,7 @@ function DHUtils() {
     this.autoEnableRoadHeader = false;
     this.autoEnableSandCollector = false;
     this.autoEnableSmelting = false;
+    this.autoEnableLumber = false;
 
     this.SmeltingTargetGlass = 'glass';
     this.SmeltingTargetBronze = 'bronze';
@@ -117,6 +123,13 @@ function DHUtils() {
     this.smeltingCosts = {};
     this.smeltingResult = {};
     this.smeltingTargetIndex = 0;
+
+    this.LumberTargetWood = 'wood';
+    this.LumberTargets = [this.LumberTargetWood];
+
+    this.lumberCosts = {};
+    this.lumberResult = {};
+    this.lumberTargetIndex = 0;
 
     this.itemPerMinuteLastCount = {};
     this.itemPerMinute = {};
@@ -164,6 +177,10 @@ DHUtils.prototype.init = function() {
     this.smeltingResult[this.SmeltingTargetSilver] = this.ItemSilverBar;
     this.smeltingResult[this.SmeltingTargetGold] = this.ItemGoldBar;
 
+    this.lumberCosts[this.LumberTargetPlanks] = 1;
+
+    this.lumberResult[this.LumberTargetPlanks] = this.ItemPlanks;
+
     this.isEnabled = true;
     this.info("Version " + this.version + " Loaded");
 };
@@ -199,6 +216,11 @@ DHUtils.prototype.initElements = function(root) {
     this.displaySmeltStatus.click({self: this}, function(arg) { arg.data.self.toggleSmelting(arg.shiftKey, arg.ctrlKey); });
     this.mainDiv.append(this.displaySmeltStatus);
 
+    this.displayLumberStatus = $('<div style="' + this.statusBarStyle + '"></div>');
+    this.displayLumberStatus.css( 'cursor', 'pointer' );
+    this.displayLumberStatus.click({self: this}, function(arg) { arg.data.self.toggleLumbering(arg.shiftKey, arg.ctrlKey); });
+    this.mainDiv.append(this.displayLumberStatus);
+
     this.displayMarketCoins = $('<div style="' + this.statusBarStyle + '"></div>');
     this.displayMarketCoins.css( 'cursor', 'pointer');
     this.displayMarketCoins.click({self: this}, function(arg) { arg.data.self.collectMarketCoins(arg.shiftKey); });
@@ -229,6 +251,16 @@ DHUtils.prototype.initElements = function(root) {
     this.displaySandCollectorStatus.click({self: this}, function(arg) { arg.data.self.toggleSandCollector(arg.shiftKey); });
     this.mainDiv.append(this.displaySandCollectorStatus);
 
+    // Make the timers click able so you don't have to navigate to key items
+    $("#furnace-timer").click(function(){ clicksKeyItem("key-item-bindedIronFurnace-box");     });
+    $("#sawmill-timer").click(function(){ clicksKeyItem("key-item-bindedSawmill-box");     });
+
+    // Oil timer
+    oilColumn = 2;
+    span = '<br /><span id="oilTimeLeft-statusbar"></span></td>';
+    $('.top-status-bar td:nth-child('+oilColumn+')').append(span);
+    $('.top-status-bar td:nth-child('+oilColumn+') > img').css('float','left');
+
     for(var i = 0; i < this.Items.length; i++) {
         var material = this.Items[i];
         var box = $('#item-' + material + '-box');
@@ -256,10 +288,30 @@ DHUtils.prototype.onUpdate = function() {
     this.updateActivateableDisplay(time);
     this.updateAutoActions(time);
     this.updateSmeltDisplay(time);
+    this.updateLumberDisplay(time);
+    this.updateOilTime(time);
 
     this.displayMarketCoins.text("Market Sales" + this.getAutoStateText(this.autoCollectMarket) + ": " + this.getCollectableMarketCoins());
 
     setTimeout(function() { dhUtils.onUpdate(); }, dhUtils.updateInterval);
+};
+
+DHUtils.prototype.updateOilTime = function(currentTime) {
+    oilUsage = oilLosePerSeconds - oilPerSeconds;
+    if(oilUsage <= 0)
+    {
+        $('#oilTimeLeft-statusbar').text('Infinite oil');
+    }
+    else
+    {
+        seconds = Math.floor(oil/oilUsage);
+        var numdays = Math.floor(seconds / 86400);
+        var numhours = Math.floor((seconds % 86400) / 3600);
+        var numminutes = Math.floor(((seconds % 86400) % 3600) / 60);
+        var numseconds = ((seconds % 86400) % 3600) % 60;
+
+        $('#oilTimeLeft-statusbar').text(numdays + " days " + numhours + " hours " + numminutes + " minutes " + numseconds + " seconds");
+    }
 };
 
 DHUtils.prototype.getAutoStateText = function(value) {
@@ -410,11 +462,19 @@ DHUtils.prototype.updateAutoActions = function(currentTime) {
         this.startSmelting();
     }
 
+    if(this.autoEnableLumber === true && this.getLumberStatus() === false) {
+        this.startLumber();
+    }
+
     this.autoActionTime = currentTime;
 };
 
 DHUtils.prototype.updateSmeltDisplay = function(time) {
     this.displaySmeltStatus.text("Smelting" + this.getAutoStateText(this.autoEnableSmelting) + ": " + this.SmeltingTargets[this.smeltingTargetIndex] + " (" + this.getSmeltingPercentage() + "%)");
+};
+
+DHUtils.prototype.updateLumberDisplay = function(time) {
+    this.displayLumberStatus.text("Lumber" + this.getAutoStateText(this.autoEnableLumber) + ": " + this.LumberTargets[this.lumberTargetIndex] + " (" + this.getLumberPercentage() + "%)");
 };
 
 DHUtils.prototype.getItemCount = function(key) {
@@ -612,6 +672,9 @@ DHUtils.prototype.getAutoOilThreshold = function() {
     return 2 * (capacity * this.smeltingCosts[this.SmeltingTargetGold]);
 };
 
+// ---------------------------------------------------------------------------
+// Smelting
+// ---------------------------------------------------------------------------
 DHUtils.prototype.getFurnaceCapacity = function() {
     return getFurnaceCapacityAgain(bindedFurnaceLevel);
 };
@@ -639,7 +702,7 @@ DHUtils.prototype.toggleSmelting = function(shiftState, ctrlState) {
 };
 
 DHUtils.prototype.getSmeltingStatus = function() {
-    return furnaceTotalTimer !== "0";
+    return this.window.furnaceTotalTimer !== "0";
 };
 
 DHUtils.prototype.getSmeltingPercentage = function() {
@@ -671,6 +734,68 @@ DHUtils.prototype.startSmelting = function() {
     send("SMELT=" + target + ";" + capacity);
 };
 
+// ---------------------------------------------------------------------------
+// Lumber
+// ---------------------------------------------------------------------------
+DHUtils.prototype.getLumberCapacity = function() {
+    // Todo: use the proper capacity, right now there's not much else to go with this
+    return 500;
+};
+
+DHUtils.prototype.toggleLumbering = function(shiftState, ctrlState) {
+    if(shiftState) {
+        this.autoEnableLumber = !this.autoEnableLumber;
+        return;
+    }
+
+    // Todo
+    if(ctrlState) {
+        // Cycle through the available things
+        this.lumberTargetIndex++;
+        if(this.lumberTargetIndex > this.LumberTargets.length - 1) {
+            this.lumberTargetIndex = 0;
+        }
+
+        return;
+    }
+
+    if(this.getLumberStatus() !== true) {
+        this.startLumber();
+    }
+};
+
+DHUtils.prototype.getLumberStatus = function() {
+    // Todo: find better notification then the percentage display
+    return sawmillPerc !== "0";
+};
+
+DHUtils.prototype.getLumberPercentage = function() {
+    // Todo:
+    return parseInt(sawmillPerc);
+};
+
+DHUtils.prototype.startLumber = function() {
+    // Double check to avoid calling this while it's active
+    if(this.getLumberStatus() !== false) {
+        return;
+    }
+
+    var capacity = this.getLumberCapacity();
+    if(capacity <= 0) {
+        return;
+    }
+
+    var target = this.LumberTargets[this.lumberTargetIndex];
+    if(target === undefined) {
+        return;
+    }
+
+    send("CUT=" + target + ";" + capacity);
+};
+
+// ---------------------------------------------------------------------------
+// Chat
+// ---------------------------------------------------------------------------
 DHUtils.prototype.resetChat = function() {
     this.chatDataLookup = {};
     $("#chat-area-div").empty();
@@ -695,7 +820,7 @@ DHUtils.prototype.refreshChat = function(data) {
         var line = arrayChat[i];
         var key = line.getHashCode();
         if(self.chatDataLookup[key] !== undefined) {
-            return;
+            continue;
         }
         self.chatDataLookup[key] = 1;
 
@@ -727,7 +852,7 @@ DHUtils.prototype.analyzeChatData = function(data) {
             data.tagClass = 'chat-tag-yell';
         } else {
             for (var i = 0; i < this.devList.length; i++) {
-                if (data.message.startsWith(devList[i])) {
+                if (data.message.startsWith(this.devList[i])) {
                     data.color = '#666600';
                     data.tagString = 'Dev';
                     data.tagClass = 'chat-tag-dev';
@@ -793,4 +918,4 @@ setTimeout(function ()
 
     // Set update loop
     setTimeout(function() { dhUtils.onUpdate(); }, dhUtils.updateInterval);
-}, 2000);
+}, 5000);
